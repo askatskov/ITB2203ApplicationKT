@@ -6,5 +6,7 @@
         public int SessionId { get; set; }
         public string SeatNo { get; set; }
         public int Price { get; set; }
-    }
+
+		public Session? Session { get; set; }
+	}
 }

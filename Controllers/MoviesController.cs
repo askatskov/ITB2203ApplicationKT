@@ -15,16 +15,16 @@ public class MoviesController : ControllerBase
         _context = context;
     }
 
-    [HttpGet]
-    public ActionResult<IEnumerable<Movie>> GetMovies(string? name = null)
-    {
-        var query = _context.Movies!.AsQueryable();
+	[HttpGet]
+	public ActionResult<IEnumerable<Movie>> GetMovies(string? Title = null)
+	{
+		var query = _context.Movies!.AsQueryable();
 
-        if (name != null)
-            query = query.Where(x => x.Title != null && x.Title.ToUpper().Contains(name.ToUpper()));
+		if (!string.IsNullOrEmpty(Title))
+			query = query.Where(x => x.Title != null && x.Title.ToLower().Contains(Title.ToLower()));
 
-        return query.ToList();
-    }
+		return query.ToList();
+	}
 
     [HttpGet("{id}")]
     public ActionResult<TextReader> GetMovie(int id)
@@ -39,40 +39,33 @@ public class MoviesController : ControllerBase
         return Ok(test);
     }
 
-    [HttpPut("{id}")]
-    public IActionResult PutMovie(int id, Movie movie)
-    {
-        var dbMovie = _context.Movies!.AsNoTracking().FirstOrDefault(x => x.Id == movie.Id);
-        if (id != movie.Id || dbMovie == null)
-        {
-            return NotFound();
-        }
+	[HttpPut("{id}")]
+	public IActionResult PutMovie(int id, Movie movie)
+	{
+		if (id != movie.Id)
+			return BadRequest();
 
+		var existing = _context.Movies!.Find(id);
+		if (existing == null)
+			return NotFound();
 
-        _context.Update(movie);
-        _context.SaveChanges();
+		existing.Title = movie.Title;
+		_context.SaveChanges();
+		return NoContent();
+	}
 
-        return NoContent();
-    }
+	[HttpPost]
+	public ActionResult<Movie> PostMovie(Movie movie)
+	{
+		if (movie.Id != 0)
+			return BadRequest("Id should not be provided");
 
-    [HttpPost]
-    public ActionResult<Movie> PostMovie(Movie movie)
-    {
-        var dbExercise = _context.Movies!.Find(movie.Id);
-        if (dbExercise == null)
-        {
-            _context.Add(movie);
-            _context.SaveChanges();
+		_context.Movies!.Add(movie);
+		_context.SaveChanges();
+		return CreatedAtAction(nameof(GetMovie), new { id = movie.Id }, movie);
+	}
 
-            return CreatedAtAction(nameof(GetMovie), new { Id = movie.Id }, movie);
-        }
-        else
-        {
-            return Conflict();
-        }
-    }
-
-    [HttpDelete("{id}")]
+	[HttpDelete("{id}")]
     public IActionResult DeleteMovie(int id)
     {
         var test = _context.Movies!.Find(id);

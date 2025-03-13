@@ -43,55 +43,69 @@ public class TicketsController : ControllerBase
         return Ok(ticket);
     }
 
-    [HttpPut("{id}")]
-    public IActionResult PutTicket(int id, Ticket ticket)
-    {
-        var dbTicket = _context.Tickets!.AsNoTracking().FirstOrDefault(x => x.Id == ticket.Id);
-        if (id != ticket.Id || dbTicket == null)
-        {
-            return NotFound();
-        }
-        if (ticket.Price <= 0)
-            return BadRequest("Ticket price must be positive number");
+	[HttpPut("{id}")]
+	public IActionResult PutTicket(int id, Ticket ticket)
+	{
+		if (id != ticket.Id)
+			return BadRequest();
 
-        if (Tickets.Any(t => t.SessionId == ticket.SessionId && t.SeatNo == ticket.SeatNo))
-            return BadRequest("Seat number must be unique within a session");
+		var existing = _context.Tickets!
+			.Include(t => t.Session)
+			.FirstOrDefault(t => t.Id == id);
 
-        _context.Update(ticket);
-        _context.SaveChanges();
+		if (existing == null)
+			return NotFound();
 
-        return NoContent();
-    }
+		if (!_context.Sessions!.Any(s => s.Id == ticket.SessionId))
+			return NotFound("Session not found");
 
-    [HttpPost]
-    public ActionResult<Ticket> PostTicket(Ticket ticket)
-    {
-        var dbExercise = _context.Tickets!.Find(ticket.Id);
-        if (dbExercise == null)
-        {
-            _context.Add(ticket);
-            _context.SaveChanges();
+		if (ticket.Price <= 0)
+			return BadRequest("Price must be positive");
 
-            return CreatedAtAction(nameof(GetTicket), new { Id = ticket.Id }, ticket);
-        }
-        else
-        {
-            return Conflict();
-        }
-    }
+		if (_context.Tickets!.Any(t =>
+			t.SessionId == ticket.SessionId &&
+			t.SeatNo == ticket.SeatNo))
+			return BadRequest("Seat number must be unique");
 
-    [HttpDelete("{id}")]
-    public IActionResult DeleteTicket(int id)
-    {
-        var ticket = _context.Tickets!.Find(id);
-        if (ticket == null)
-        {
-            return NotFound();
-        }
+		existing.SessionId = ticket.SessionId;
+		existing.SeatNo = ticket.SeatNo;
+		existing.Price = ticket.Price;
 
-        _context.Remove(ticket);
-        _context.SaveChanges();
+		_context.SaveChanges();
+		return NoContent();
+	}
 
-        return NoContent();
-    }
+	[HttpPost]
+	public ActionResult<Ticket> PostTicket(Ticket ticket)
+	{
+		if (ticket.Id != 0)
+			return BadRequest("Id should not be provided");
+
+		if (!_context.Sessions!.Any(s => s.Id == ticket.SessionId))
+			return BadRequest("Session not found");
+
+		if (ticket.Price <= 0)
+			return BadRequest("Price must be positive");
+
+		if (_context.Tickets!.Any(t =>
+			t.SessionId == ticket.SessionId &&
+			t.SeatNo == ticket.SeatNo))
+			return BadRequest("Seat number must be unique");
+
+		_context.Tickets!.Add(ticket);
+		_context.SaveChanges();
+		return CreatedAtAction(nameof(GetTicket), new { id = ticket.Id }, ticket);
+	}
+
+	[HttpDelete("{id}")]
+	public IActionResult DeleteTicket(int id)
+	{
+		var ticket = _context.Tickets!.Find(id);
+		if (ticket == null)
+			return NotFound();
+
+		_context.Tickets.Remove(ticket);
+		_context.SaveChanges();
+		return NoContent();
+	}
 }

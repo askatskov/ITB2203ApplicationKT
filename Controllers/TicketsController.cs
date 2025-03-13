@@ -11,9 +11,6 @@ public class TicketsController : ControllerBase
 {
     private readonly DataContext _context;
 
-    List<Ticket> Tickets = new List<Ticket>();
-
-
     public TicketsController(DataContext context)
     {
         _context = context;
@@ -56,21 +53,6 @@ public class TicketsController : ControllerBase
 		if (existing == null)
 			return NotFound();
 
-		if (!_context.Sessions!.Any(s => s.Id == ticket.SessionId))
-			return NotFound("Session not found");
-
-		if (ticket.Price <= 0)
-			return BadRequest("Price must be positive");
-
-		if (_context.Tickets!.Any(t =>
-			t.SessionId == ticket.SessionId &&
-			t.SeatNo == ticket.SeatNo))
-			return BadRequest("Seat number must be unique");
-
-		existing.SessionId = ticket.SessionId;
-		existing.SeatNo = ticket.SeatNo;
-		existing.Price = ticket.Price;
-
 		_context.SaveChanges();
 		return NoContent();
 	}
@@ -78,21 +60,22 @@ public class TicketsController : ControllerBase
 	[HttpPost]
 	public ActionResult<Ticket> PostTicket(Ticket ticket)
 	{
-		if (ticket.Id != 0)
-			return BadRequest("Id should not be provided");
-
 		if (!_context.Sessions!.Any(s => s.Id == ticket.SessionId))
 			return BadRequest("Session not found");
 
 		if (ticket.Price <= 0)
 			return BadRequest("Price must be positive");
 
-		if (_context.Tickets!.Any(t =>
-			t.SessionId == ticket.SessionId &&
-			t.SeatNo == ticket.SeatNo))
-			return BadRequest("Seat number must be unique");
+        if (_context.Tickets!.Any(t =>
+            t.SessionId == ticket.SessionId &&
+            t.SeatNo == ticket.SeatNo))
+        {
+            return BadRequest("Seat number must be unique");
+        }
+		
 
-		_context.Tickets!.Add(ticket);
+
+        _context.Tickets!.Add(ticket);
 		_context.SaveChanges();
 		return CreatedAtAction(nameof(GetTicket), new { id = ticket.Id }, ticket);
 	}

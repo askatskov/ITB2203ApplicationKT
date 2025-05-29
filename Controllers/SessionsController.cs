@@ -10,7 +10,6 @@ namespace ITB2203Application.Controllers;
 public class SessionsController : ControllerBase
 {
     private readonly DataContext _context;
-    List<Session> Sessions = new List<Session>();
 
     public SessionsController(DataContext context)
     {
